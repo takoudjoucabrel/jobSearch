@@ -1,0 +1,17 @@
+.env
+node_modules/
+dist /
+build/
+.angular/
+cache/
+coverage/  
+.DS_Store
+*.log
+*.tmp
+*.bak
+*.swp
+.idea
+.vscode
+*.sublime-project
+*.sublime-workspace
+*.iml
