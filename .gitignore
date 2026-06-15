@@ -15,3 +15,7 @@ coverage/
 *.sublime-project
 *.sublime-workspace
 *.iml
+myenv/
+°__pycache__/
+*.pyc
+*.pyo

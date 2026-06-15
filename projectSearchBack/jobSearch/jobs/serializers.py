@@ -5,10 +5,7 @@ from accounts.serializers import SkillSerializer, CompanySerializer
 from .models import Application, FavoriteJob, Job, JobView
 from accounts.models import Skill
 
-
-# ─────────────────────────────────────────────
 #  Job
-# ─────────────────────────────────────────────
 
 class JobListSerializer(serializers.ModelSerializer):
     """Version allégée pour les listes (évite les requêtes lourdes)."""
@@ -99,19 +96,16 @@ class JobWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         return JobDetailSerializer(instance, context=self.context).data
 
-
-# ─────────────────────────────────────────────
 #  Application
-# ─────────────────────────────────────────────
 
 class ApplicationReadSerializer(serializers.ModelSerializer):
     """Lecture d'une candidature (vue candidat ou entreprise)."""
 
-    job_title    = serializers.CharField(source="job.title",              read_only=True)
-    job_id       = serializers.IntegerField(source="job.id",              read_only=True)
+    job_title = serializers.CharField(source="job.title", read_only=True)
+    job_id = serializers.IntegerField(source="job.id", read_only=True)
     company_name = serializers.CharField(source="job.company.company_name", read_only=True)
-    candidate_name = serializers.CharField(source="candidate.full_name",  read_only=True)
-    candidate_id   = serializers.IntegerField(source="candidate.id",      read_only=True)
+    candidate_name = serializers.CharField(source="candidate.full_name", read_only=True)
+    candidate_id = serializers.IntegerField(source="candidate.id", read_only=True)
 
     class Meta:
         model = Application
@@ -168,10 +162,7 @@ class ApplicationStatusSerializer(serializers.ModelSerializer):
             )
         return value
 
-
-# ─────────────────────────────────────────────
 #  FavoriteJob
-# ─────────────────────────────────────────────
 
 class FavoriteJobSerializer(serializers.ModelSerializer):
     """Lecture des offres favorites d'un candidat."""
@@ -182,10 +173,7 @@ class FavoriteJobSerializer(serializers.ModelSerializer):
         model = FavoriteJob
         fields = ("id", "job", "saved_at")
 
-
-# ─────────────────────────────────────────────
 #  JobView  (interne — pas exposé directement)
-# ─────────────────────────────────────────────
 
 class JobViewSerializer(serializers.ModelSerializer):
     class Meta:

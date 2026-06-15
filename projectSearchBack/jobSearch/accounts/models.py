@@ -1,31 +1,48 @@
-from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
+class UserManager(BaseUserManager):
+    use_in_migrations = True
 
-# ─────────────────────────────────────────────
+    def _create_user(self, email, password, **extra_fields):
+        if not email:
+            raise ValueError("L'adresse e-mail est obligatoire.")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Le superuser doit avoir is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Le superuser doit avoir is_superuser=True.")
+
+        return self._create_user(email, password, **extra_fields)
+
 #  User
-# ─────────────────────────────────────────────
 
 class User(AbstractUser):
     username = None
-
+    objects = UserManager()
     USER_TYPE_CHOICES = [
         ("candidate", "Candidat"),
         ("company", "Entreprise"),
     ]
 
     email = models.EmailField(unique=True, verbose_name="Adresse e-mail")
-    user_type = models.CharField(
-        max_length=20,
-        choices=USER_TYPE_CHOICES,
-        verbose_name="Type d'utilisateur",
-    )
-    is_verified = models.BooleanField(
-        default=False,
-        verbose_name="E-mail vérifié",
-        help_text="Activé après confirmation de l'adresse e-mail.",
-    )
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, verbose_name="Type d'utilisateur")
+    is_verified = models.BooleanField(default=False, verbose_name="E-mail vérifié", help_text="Activé après confirmation de l'adresse e-mail.")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Modifié le")
 
@@ -50,17 +67,14 @@ class User(AbstractUser):
 
     @property
     def profile(self):
-        """Retourne le profil associé (Candidate ou Company) ou None."""
+        # Retourne le profil associé (Candidate ou Company) ou None.
         if self.user_type == "candidate":
             return getattr(self, "candidate", None)
         if self.user_type == "company":
             return getattr(self, "company", None)
         return None
 
-
-# ─────────────────────────────────────────────
 #  Skill  (table dédiée pour filtrage efficace)
-# ─────────────────────────────────────────────
 
 class Skill(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Compétence")
@@ -73,11 +87,7 @@ class Skill(models.Model):
     def __str__(self):
         return self.name
 
-
-# ─────────────────────────────────────────────
 #  Candidate
-# ─────────────────────────────────────────────
-
 EDUCATION_CHOICES = [
     ("bac", "Baccalauréat"),
     ("bac+2", "Bac+2 (BTS / DUT)"),
@@ -86,7 +96,6 @@ EDUCATION_CHOICES = [
     ("bac+8", "Bac+8 (Doctorat)"),
     ("other", "Autre"),
 ]
-
 
 class Candidate(models.Model):
     user = models.OneToOneField(
@@ -97,41 +106,14 @@ class Candidate(models.Model):
     )
     full_name = models.CharField(max_length=250, verbose_name="Nom complet")
     city = models.CharField(max_length=200, verbose_name="Ville")
-    phone = models.CharField(
-        max_length=20, null=True, blank=True, verbose_name="Téléphone"
-    )
-    bio = models.TextField(
-        null=True, blank=True, verbose_name="Présentation",
-        help_text="Résumé du profil affiché aux recruteurs."
-    )
-    experience_years = models.PositiveSmallIntegerField(
-        verbose_name="Années d'expérience"
-    )
-    skills = models.ManyToManyField(
-        Skill,
-        blank=True,
-        related_name="candidates",
-        verbose_name="Compétences",
-    )
-    education_level = models.CharField(
-        max_length=10,
-        choices=EDUCATION_CHOICES,
-        verbose_name="Niveau d'études",
-    )
-    linkedin = models.URLField(
-        null=True, blank=True, verbose_name="Profil LinkedIn"
-    )
-    cv = models.FileField(
-        upload_to="cvs/",
-        null=True,
-        blank=True,
-        verbose_name="CV (fichier)",
-    )
-    is_available = models.BooleanField(
-        default=True,
-        verbose_name="En recherche d'emploi",
-        help_text="Indique si le candidat est actuellement disponible.",
-    )
+    phone = models.CharField(max_length=20, null=True, blank=True, verbose_name="Téléphone")
+    bio = models.TextField(null=True, blank=True, verbose_name="Présentation", help_text="Résumé du profil affiché aux recruteurs.")
+    experience_years = models.PositiveSmallIntegerField(verbose_name="Années d'expérience")
+    skills = models.ManyToManyField(Skill, blank=True, related_name="candidates", verbose_name="Compétences")
+    education_level = models.CharField(max_length=10, choices=EDUCATION_CHOICES,verbose_name="Niveau d'études")
+    linkedin = models.URLField(null=True, blank=True, verbose_name="Profil LinkedIn")
+    cv = models.FileField(upload_to="cvs/", null=True, blank=True, verbose_name="CV (fichier)")
+    is_available = models.BooleanField(default=True, verbose_name="En recherche d'emploi", help_text="Indique si le candidat est actuellement disponible.")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Modifié le")
 
@@ -143,42 +125,19 @@ class Candidate(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.user.email})"
 
-
-# ─────────────────────────────────────────────
 #  Company
-# ─────────────────────────────────────────────
 
 class Company(models.Model):
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        related_name="company",
-        verbose_name="Utilisateur",
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company", verbose_name="Utilisateur")
     company_name = models.CharField(max_length=250, verbose_name="Nom de l'entreprise")
-    logo = models.ImageField(
-        upload_to="company_logos/",
-        blank=True,
-        null=True,
-        verbose_name="Logo",
-    )
+    logo = models.ImageField(upload_to="company_logos/", blank=True, null=True, verbose_name="Logo")
     description = models.TextField(verbose_name="Description")
     location = models.CharField(max_length=200, verbose_name="Localisation")
-    phone = models.CharField(
-        max_length=20, null=True, blank=True, verbose_name="Téléphone"
-    )
-    website = models.URLField(
-        max_length=200, null=True, blank=True, verbose_name="Site web"
-    )
+    phone = models.CharField(max_length=20, null=True, blank=True, verbose_name="Téléphone")
+    website = models.URLField(max_length=200, null=True, blank=True, verbose_name="Site web")
     sector = models.CharField(max_length=100, verbose_name="Secteur d'activité")
-    employee_count = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name="Nombre d'employés"
-    )
-    is_verified = models.BooleanField(
-        default=False,
-        verbose_name="Entreprise vérifiée",
-        help_text="Activé manuellement par un administrateur.",
-    )
+    employee_count = models.PositiveIntegerField(null=True, blank=True, verbose_name="Nombre d'employés")
+    is_verified = models.BooleanField(default=False, verbose_name="Entreprise vérifiée", help_text="Activé manuellement par un administrateur.")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Modifié le")
 

@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from .models import User
+from .tasks import send_password_reset_email  # Celery task pour l'envoi d'e-mails
 from .serializers import (
     LoginSerializer,
     PasswordChangeSerializer,
@@ -14,8 +15,6 @@ from .serializers import (
     PasswordResetRequestSerializer,
     RegisterSerializer,
 )
-from .tasks import send_password_reset_email  # Celery task 
-
 
 class RegisterView(generics.CreateAPIView):
     """
@@ -31,7 +30,7 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(
-            serializer.to_representation({"user": user}),
+            serializer.to_representation(user),
             status=status.HTTP_201_CREATED,
         )
 

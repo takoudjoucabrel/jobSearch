@@ -5,7 +5,7 @@ from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
 
-#  1. RÉINITIALISATION DU MOT DE PASSE
+#   RÉINITIALISATION DU MOT DE PASSE
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_password_reset_email(self, user_email: str, uid: str, token: str) -> None:
@@ -25,7 +25,7 @@ def send_password_reset_email(self, user_email: str, uid: str, token: str) -> No
     except Exception as exc:
         raise self.retry(exc=exc)
 
-#  2. NOUVELLE CANDIDATURE (notification à l'entreprise)
+#   NOUVELLE CANDIDATURE (notification à l'entreprise)
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_new_application_email(
@@ -51,7 +51,7 @@ def send_new_application_email(
     except Exception as exc:
         raise self.retry(exc=exc)
 
-#  3. CHANGEMENT DE STATUT (notification au candidat)
+#   CHANGEMENT DE STATUT (notification au candidat)
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_application_status_email(
@@ -71,31 +71,17 @@ def send_application_status_email(
         }
         text_message = render_to_string("emails/application_status.txt", context)
         html_message = render_to_string("emails/application_status.html", context)
-        send_mail(
-            subject=subject, message=text_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[candidate_email],
-            html_message=html_message, fail_silently=False,
-        )
+        send_mail(subject=subject, message=text_message, from_email=settings.DEFAULT_FROM_EMAIL, recipient_list=[candidate_email], html_message=html_message, fail_silently=False)
     except Exception as exc:
         raise self.retry(exc=exc)
 
-#  4. OFFRE SUR LE POINT D'EXPIRER (rappel à l'entreprise)
+#   OFFRE SUR LE POINT D'EXPIRER (rappel à l'entreprise)
 
 @shared_task
 def send_deadline_reminders_task():
     """Envoie les rappels pour les offres expirant dans 3 jours. Planifier dans CELERY_BEAT_SCHEDULE."""
     from jobs.models import Job
     threshold = timezone.now().date() + timedelta(days=3)
-    jobs_expiring = Job.objects.filter(
-        status=Job.JobStatus.OPEN,
-        deadline=threshold,
-    ).select_related("company__user")
+    jobs_expiring = Job.objects.filter(status=Job.JobStatus.OPEN, deadline=threshold).select_related("company__user")
     for job in jobs_expiring:
-        send_job_deadline_reminder.delay(
-            company_email=job.company.user.email,
-            company_name=job.company.company_name,
-            job_title=job.title,
-            job_id=job.id,
-            days_left=3,
-        )
+        send_job_deadline_reminder.delay(company_email=job.company.user.email, company_name=job.company.company_name, job_title=job.title, job_id=job.id, days_left=3, )

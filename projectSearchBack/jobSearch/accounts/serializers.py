@@ -5,26 +5,18 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from .models import Candidate, Company, User, Skill
 
-from .models import Candidate, Company, User
-
-
-# ─────────────────────────────────────────────
 #  Helpers
-# ─────────────────────────────────────────────
 
 class UserMinimalSerializer(serializers.ModelSerializer):
     """Représentation légère de l'utilisateur (utilisée dans les réponses auth)."""
-
     class Meta:
         model = User
         fields = ("id", "email", "user_type")
         read_only_fields = fields
 
-
-# ─────────────────────────────────────────────
 #  Profils
-# ─────────────────────────────────────────────
 
 class CandidateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,10 +29,7 @@ class CompanySerializer(serializers.ModelSerializer):
         model = Company
         exclude = ("user",)
 
-
-# ─────────────────────────────────────────────
 #  Inscription
-# ─────────────────────────────────────────────
 
 class RegisterSerializer(serializers.ModelSerializer):
     """
@@ -57,19 +46,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     Si user_type == "company" :
         company_name, description, location, sector, website (optionnel), logo (optionnel)
     """
-
-    password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password]
-    )
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     confirm_password = serializers.CharField(write_only=True, required=True)
 
     # Champs Candidate (optionnels au niveau sérialiseur, validés selon user_type)
     full_name = serializers.CharField(required=False)
     city = serializers.CharField(required=False)
     experience_years = serializers.IntegerField(required=False, min_value=0)
-    skills = serializers.ListField(
-        child=serializers.CharField(), required=False, default=list
-    )
+    skills = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     education_level = serializers.CharField(required=False)
     cv = serializers.FileField(required=False, allow_null=True)
 
@@ -108,35 +92,26 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("confirm_password"):
-            raise serializers.ValidationError(
-                {"confirm_password": "Les mots de passe ne correspondent pas."}
-            )
+            raise serializers.ValidationError({"confirm_password": "Les mots de passe ne correspondent pas."})
 
         user_type = attrs.get("user_type")
         if user_type not in ("candidate", "company"):
-            raise serializers.ValidationError(
-                {"user_type": "Valeur invalide. Choisissez 'candidate' ou 'company'."}
-            )
+            raise serializers.ValidationError({"user_type": "Valeur invalide. Choisissez 'candidate' ou 'company'."})
 
         if user_type == "candidate":
             required = ("full_name", "city", "experience_years", "education_level")
             missing = [f for f in required if not attrs.get(f) and attrs.get(f) != 0]
             if missing:
-                raise serializers.ValidationError(
-                    {f: "Ce champ est requis pour un candidat." for f in missing}
-                )
+                raise serializers.ValidationError({f: "Ce champ est requis pour un candidat." for f in missing})
 
         if user_type == "company":
             required = ("company_name", "description", "location", "sector")
             missing = [f for f in required if not attrs.get(f)]
             if missing:
-                raise serializers.ValidationError(
-                    {f: "Ce champ est requis pour une entreprise." for f in missing}
-                )
-
+                raise serializers.ValidationError({f: "Ce champ est requis pour une entreprise." for f in missing})
         return attrs
 
-    # ── Création ─────────────────────────────
+    # Création
 
     def create(self, validated_data):
         user_type = validated_data["user_type"]
@@ -151,6 +126,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             if value is not None:
                 profile_data[field] = value
 
+        # Extraire skills à part (ManyToMany)
+        skills_data = profile_data.pop("skills", None)
+
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
@@ -158,12 +136,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         if user_type == "candidate":
-            Candidate.objects.create(user=user, **profile_data)
+            candidate = Candidate.objects.create(user=user, **profile_data)
+            if skills_data:
+                candidate.skills.set(skills_data)
         else:
             Company.objects.create(user=user, **profile_data)
 
         return user
-
     def to_representation(self, instance):
         """Retourne le token JWT + les infos utilisateur après inscription."""
         refresh = RefreshToken.for_user(instance)
@@ -175,10 +154,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "user": UserMinimalSerializer(instance).data,
         }
 
-
-# ─────────────────────────────────────────────
 #  Connexion
-# ─────────────────────────────────────────────
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -189,17 +165,11 @@ class LoginSerializer(serializers.Serializer):
         password = attrs.get("password")
 
         user = authenticate(
-            request=self.context.get("request"), username=email, password=password
-        )
+            request=self.context.get("request"), username=email, password=password)
         if not user:
-            raise serializers.ValidationError(
-                {"non_field_errors": "Email ou mot de passe incorrect."}
-            )
+            raise serializers.ValidationError({"non_field_errors": "Email ou mot de passe incorrect."})
         if not user.is_active:
-            raise serializers.ValidationError(
-                {"non_field_errors": "Ce compte est désactivé."}
-            )
-
+            raise serializers.ValidationError({"non_field_errors": "Ce compte est désactivé."})
         attrs["user"] = user
         return attrs
 
@@ -214,11 +184,8 @@ class LoginSerializer(serializers.Serializer):
             "user": UserMinimalSerializer(user).data,
         }
 
-
-# ─────────────────────────────────────────────
 #  Réinitialisation du mot de passe — étape 1
 #  (demande d'envoi d'e-mail)
-# ─────────────────────────────────────────────
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -227,11 +194,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         # On ne révèle PAS si l'adresse existe (protection contre l'énumération)
         return value.lower().strip()
 
-
-# ─────────────────────────────────────────────
 #  Réinitialisation du mot de passe — étape 2
 #  (confirmation avec le token reçu par e-mail)
-# ─────────────────────────────────────────────
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
@@ -266,10 +230,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user.save(update_fields=["password"])
         return user
 
-
-# ─────────────────────────────────────────────
 #  Changement de mot de passe (utilisateur connecté)
-# ─────────────────────────────────────────────
 
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
@@ -294,3 +255,10 @@ class PasswordChangeSerializer(serializers.Serializer):
         user.set_password(self.validated_data["new_password"])
         user.save(update_fields=["password"])
         return user
+    
+class SkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        fields = ("name",)    
+
+
