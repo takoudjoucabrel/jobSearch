@@ -1,9 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { JobsearchList } from './components/jobsearch-list/jobsearch-list';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [JobsearchList],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

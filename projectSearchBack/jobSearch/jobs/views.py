@@ -273,7 +273,6 @@ class FavoriteJobListView(generics.ListAPIView):
             candidate__user=self.request.user
         ).select_related("job", "job__company").prefetch_related("job__skills_required")
 
-
 class FavoriteJobToggleView(APIView):
     """
     POST   /jobs/<job_id>/favorite/  → ajoute aux favoris

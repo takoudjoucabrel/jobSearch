@@ -6,7 +6,6 @@ from .models import Application, FavoriteJob, Job, JobView
 from accounts.models import Skill
 
 #  Job
-
 class JobListSerializer(serializers.ModelSerializer):
     """Version allégée pour les listes (évite les requêtes lourdes)."""
 
@@ -44,7 +43,6 @@ class JobDetailSerializer(serializers.ModelSerializer):
             "skills_required", "applications_count", "views_count",
             "posted_at", "updated_at",
         )
-
 
 class JobWriteSerializer(serializers.ModelSerializer):
     """Création / mise à jour d'une offre (réservé aux entreprises)."""
@@ -95,12 +93,11 @@ class JobWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return JobDetailSerializer(instance, context=self.context).data
-
+    
 #  Application
 
 class ApplicationReadSerializer(serializers.ModelSerializer):
     """Lecture d'une candidature (vue candidat ou entreprise)."""
-
     job_title = serializers.CharField(source="job.title", read_only=True)
     job_id = serializers.IntegerField(source="job.id", read_only=True)
     company_name = serializers.CharField(source="job.company.company_name", read_only=True)
@@ -114,7 +111,6 @@ class ApplicationReadSerializer(serializers.ModelSerializer):
             "candidate_id", "candidate_name",
             "cover_letter", "status", "applied_at", "updated_at",
         )
-
 
 class ApplicationCreateSerializer(serializers.ModelSerializer):
     """Création d'une candidature par un candidat."""
@@ -180,3 +176,5 @@ class JobViewSerializer(serializers.ModelSerializer):
         model = JobView
         fields = ("id", "job", "view_count", "first_viewed_at", "last_viewed_at")
         read_only_fields = fields
+
+

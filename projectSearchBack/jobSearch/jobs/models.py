@@ -15,11 +15,11 @@ class Job(models.Model):
         OPEN   = "open",   "Ouverte"
         CLOSED = "closed", "Fermée"
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="jobs", verbose_name="Entreprise" )
-    title       = models.CharField(max_length=200, verbose_name="Intitulé du poste")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="jobs", verbose_name="Entreprise")
+    title = models.CharField(max_length=200, verbose_name="Intitulé du poste")
     description = models.TextField(verbose_name="Description")
-    location    = models.CharField(max_length=100, verbose_name="Localisation")
-    remote      = models.BooleanField(default=False, verbose_name="Télétravail possible")
+    location = models.CharField(max_length=100, verbose_name="Localisation")
+    remote = models.BooleanField(default=False, verbose_name="Télétravail possible")
     contract_type = models.CharField( max_length=20, choices=ContractType.choices, verbose_name="Type de contrat")
     status = models.CharField(max_length=10, choices=JobStatus.choices, default=JobStatus.OPEN, verbose_name="Statut")
     experience_required = models.PositiveSmallIntegerField(default=0, verbose_name="Expérience requise (années)")
@@ -27,8 +27,8 @@ class Job(models.Model):
     skills_required = models.ManyToManyField("accounts.Skill", blank=True, related_name="jobs", verbose_name="Compétences requises",)
     salary_min = models.PositiveIntegerField(null=True, blank=True, verbose_name="Salaire minimum (€/an)")
     salary_max = models.PositiveIntegerField(null=True, blank=True, verbose_name="Salaire maximum (€/an)")
-    deadline   = models.DateField(null=True, blank=True, verbose_name="Date limite de candidature")
-    posted_at  = models.DateTimeField(auto_now_add=True, verbose_name="Publié le")
+    deadline = models.DateField(null=True, blank=True, verbose_name="Date limite de candidature")
+    posted_at = models.DateTimeField(auto_now_add=True, verbose_name="Publié le")
     updated_at = models.DateTimeField(auto_now=True,     verbose_name="Modifié le")
 
     class Meta:
@@ -65,7 +65,7 @@ class Application(models.Model):
         ACCEPTED = "accepted", "Acceptée"
         REJECTED = "rejected", "Refusée"
 
-    job = models.ForeignKey(Job,       on_delete=models.CASCADE, related_name="applications")
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="applications")
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name="applications")
     cover_letter = models.TextField(null=True, blank=True, verbose_name="Lettre de motivation")
     status = models.CharField(max_length=10, choices=ApplicationStatus.choices, default=ApplicationStatus.PENDING, verbose_name="Statut")
